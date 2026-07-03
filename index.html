@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오늘 뭐 먹지?</title>
+<style>
+:root{
+  --primary:#0D4A8F; --primary-dark:#093563; --accent:#12B5A5; --accent-soft:#E0F6F4;
+  --bg:#F4F6FA; --card:#FFFFFF; --text:#1B2430; --text-sub:#6B7684; --line:#E4E8EF;
+  --chip:#EEF2F8; --danger:#E45757; --gold:#F5B031;
+  --shadow:0 4px 16px rgba(20,40,80,.08);
+}
+[data-theme="dark"]{
+  --bg:#12161D; --card:#1C222C; --text:#EDF1F7; --text-sub:#9AA5B5; --line:#2C3542;
+  --chip:#242C38; --accent-soft:#12332F; --shadow:0 4px 16px rgba(0,0,0,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+body{background:#2A3340;display:flex;justify-content:center;min-height:100vh;}
+#phone{width:100%;max-width:430px;min-height:100vh;background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;position:relative;transition:background .3s,color .3s;}
+.screen{display:none;flex:1;flex-direction:column;overflow-y:auto;padding-bottom:88px;}
+.screen.active{display:flex;}
+.appbar{padding:18px 20px 10px;font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.appbar small{font-size:12px;color:var(--text-sub);font-weight:500;}
+.content{padding:8px 20px 20px;display:flex;flex-direction:column;gap:14px;}
+
+/* ---------- bottom nav ---------- */
+#nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;
+  background:var(--card);border-top:1px solid var(--line);display:flex;z-index:50;}
+#nav button{flex:1;background:none;border:none;padding:10px 0 12px;cursor:pointer;
+  color:var(--text-sub);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+#nav button .ico{font-size:21px;line-height:1;}
+#nav button.on{color:var(--primary);font-weight:700;}
+[data-theme="dark"] #nav button.on{color:var(--accent);}
+
+/* ---------- common ---------- */
+.card{background:var(--card);border-radius:16px;padding:18px;box-shadow:var(--shadow);}
+.btn{display:block;width:100%;padding:15px;border:none;border-radius:14px;font-size:16px;font-weight:700;
+  cursor:pointer;background:var(--primary);color:#fff;transition:transform .1s;}
+.btn:active{transform:scale(.97);}
+.btn.ghost{background:var(--chip);color:var(--text);}
+.btn.accent{background:var(--accent);}
+.btn.sm{padding:10px;font-size:14px;border-radius:10px;width:auto;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{padding:9px 15px;border-radius:999px;background:var(--chip);border:1.5px solid transparent;
+  font-size:14px;cursor:pointer;user-select:none;color:var(--text);}
+.chip.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.chip.sel-red{background:#FDECEC;border-color:var(--danger);color:var(--danger);font-weight:700;}
+[data-theme="dark"] .chip.sel-red{background:#3A2222;}
+.label{font-size:13px;font-weight:700;color:var(--text-sub);margin-bottom:6px;display:block;}
+input[type=text],input[type=number],input[type=password],select,textarea{width:100%;padding:12px;border:1.5px solid var(--line);
+  border-radius:10px;font-size:15px;background:var(--card);color:var(--text);}
+.field{margin-bottom:14px;}
+.title-lg{font-size:22px;font-weight:800;line-height:1.35;}
+.sub{font-size:13.5px;color:var(--text-sub);line-height:1.5;}
+
+/* ---------- home ---------- */
+#home .content{align-items:center;text-align:center;padding-top:34px;gap:18px;}
+.uos-mark{width:84px;height:84px;border-radius:22px;background:var(--primary);color:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;
+  box-shadow:var(--shadow);}
+.uos-mark span{font-size:26px;letter-spacing:1px;}
+.uos-mark small{font-size:9px;font-weight:600;opacity:.85;}
+
+/* ---------- wizard ---------- */
+.stepbar{display:flex;gap:6px;padding:0 20px;margin-top:4px;}
+.stepbar i{flex:1;height:5px;border-radius:3px;background:var(--chip);}
+.stepbar i.done{background:var(--accent);}
+.wizfoot{display:flex;gap:10px;padding:6px 20px 20px;}
+.result-item{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;
+  padding:14px;box-shadow:var(--shadow);border:2px solid transparent;cursor:pointer;}
+.result-item.picked{border-color:var(--accent);}
+.result-item .rank{width:34px;height:34px;border-radius:10px;background:var(--accent-soft);color:var(--accent);
+  font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.result-item .info{flex:1;min-width:0;}
+.result-item .nm{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.result-item .mt{font-size:12px;color:var(--text-sub);margin-top:2px;}
+.ibtn{width:32px;height:32px;border-radius:50%;border:none;background:var(--chip);color:var(--text-sub);
+  font-weight:800;cursor:pointer;flex-shrink:0;font-size:15px;}
+
+/* ---------- dictionary ---------- */
+.seg{display:flex;background:var(--chip);border-radius:12px;padding:4px;}
+.seg button{flex:1;border:none;background:none;padding:9px;border-radius:9px;font-size:14px;font-weight:700;
+  color:var(--text-sub);cursor:pointer;}
+.seg button.on{background:var(--card);color:var(--text);box-shadow:0 2px 6px rgba(0,0,0,.12);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.tile{padding:16px 8px;border:none;border-radius:14px;background:var(--card);box-shadow:var(--shadow);
+  font-size:14px;font-weight:700;cursor:pointer;color:var(--text);text-align:center;}
+.tile .em{font-size:24px;display:block;margin-bottom:6px;}
+.list-item{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:13px;
+  padding:13px 14px;box-shadow:var(--shadow);cursor:pointer;}
+.list-item .nm{font-weight:700;font-size:14.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.list-item .meta{font-size:12px;color:var(--text-sub);flex-shrink:0;}
+.badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);flex-shrink:0;}
+
+/* ---------- settings ---------- */
+.set-item{display:flex;align-items:center;gap:12px;padding:16px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
+.set-item:last-child{border-bottom:none;}
+.set-item .em{font-size:20px;}
+.set-item .tt{flex:1;font-weight:600;font-size:15px;}
+.set-item .arr{color:var(--text-sub);}
+.friend-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);}
+.friend-row:last-child{border-bottom:none;}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--accent-soft);color:var(--accent);
+  display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;}
+.friend-row .fi{flex:1;min-width:0;}
+.friend-row .fn{font-weight:700;font-size:14.5px;}
+.friend-row .fd{font-size:12px;color:var(--text-sub);}
+
+/* ---------- modal ---------- */
+#modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;
+  justify-content:center;align-items:flex-end;}
+#modal-bg.open{display:flex;}
+#modal{width:100%;max-width:430px;max-height:82vh;overflow-y:auto;background:var(--card);
+  border-radius:22px 22px 0 0;padding:22px 22px 30px;animation:up .22s ease;}
+@keyframes up{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.menu-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px;}
+.menu-row:last-child{border-bottom:none;}
+.menu-row b{font-weight:700;}
+.info-row{display:flex;gap:8px;font-size:13.5px;margin-top:7px;color:var(--text-sub);line-height:1.45;}
+.info-row .k{flex-shrink:0;width:60px;font-weight:700;}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(20,25,35,.92);
+  color:#fff;padding:11px 20px;border-radius:999px;font-size:13.5px;z-index:200;display:none;white-space:nowrap;}
+
+/* ---------- irumae speech ---------- */
+.speech{position:relative;background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow);
+  font-size:14.5px;line-height:1.55;}
+.speech:after{content:'';position:absolute;bottom:-9px;left:44px;border:10px solid transparent;
+  border-top-color:var(--card);border-bottom:none;}
+.center{display:flex;flex-direction:column;align-items:center;}
+</style>
+</head>
+<body>
+<div id="phone">
+
+  <!-- ================= 로그인 (클라우드 모드 전용) ================= -->
+  <div class="screen" id="auth">
+    <div class="appbar">🔐 로그인</div>
+    <div class="content" style="padding-top:24px;">
+      <div class="center" style="gap:10px;margin-bottom:4px;">
+        <div class="uos-mark"><span>UOS</span><small>서울시립대학교</small></div>
+        <div class="sub">로그인하고 오늘의 메뉴를 뽑아보세요!</div>
+      </div>
+      <div class="card">
+        <div class="field"><label class="label">이메일</label><input type="text" id="a-email" placeholder="예) irumae@uos.ac.kr"></div>
+        <div class="field"><label class="label">비밀번호</label><input type="password" id="a-pw" placeholder="6자 이상"></div>
+        <button class="btn" onclick="authSignIn()">로그인</button>
+        <button class="btn ghost" style="margin-top:8px;" onclick="authSignUp()">회원가입</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 회원가입 / 프로필 ================= -->
+  <div class="screen" id="signup">
+    <div class="appbar">🎓 프로필 설정 <small id="signup-sub">프로필을 설정하고 시작해요!</small></div>
+    <div class="content">
+      <div class="card">
+        <div class="field"><label class="label">이름</label><input type="text" id="p-name" placeholder="예) 김시립"></div>
+        <div class="field"><label class="label">아이디 (친구추가용)</label><input type="text" id="p-id" placeholder="예) uos2026"></div>
+        <div class="field"><label class="label">입학년도</label>
+          <select id="p-year"></select></div>
+        <div class="field"><label class="label">성별</label>
+          <div class="chips" id="p-gender">
+            <span class="chip" data-v="남성">남성</span><span class="chip" data-v="여성">여성</span><span class="chip" data-v="선택 안 함">선택 안 함</span>
+          </div></div>
+        <div class="field"><label class="label">단과대</label><select id="p-college"></select></div>
+        <div class="field"><label class="label">선호 음식 카테고리 (복수 선택)</label>
+          <div class="chips" id="p-pref"></div></div>
+        <div class="field"><label class="label">못 먹는 음식 (쉼표로 구분)</label>
+          <input type="text" id="p-cant" placeholder="예) 곱창, 순대, 회"></div>
+        <div class="field"><label class="label">알러지 여부</label>
+          <div class="chips" id="p-allergy-yn">
+            <span class="chip" data-v="없음">없음</span><span class="chip" data-v="있음">있음</span>
+          </div>
+          <input type="text" id="p-allergy" placeholder="알러지 음식 입력 예) 새우, 땅콩" style="display:none;margin-top:8px;">
+        </div>
+      </div>
+      <button class="btn" id="signup-save">저장하고 시작하기</button>
+    </div>
+  </div>
+
+  <!-- ================= 홈 ================= -->
+  <div class="screen" id="home">
+    <div class="content">
+      <div class="uos-mark"><span>UOS</span><small>서울시립대학교</small></div>
+      <div class="sub">오늘 뭐 먹지? 고민은 이루매에게 맡겨요 🍚</div>
+      <svg id="irumae-home" width="190" height="190" viewBox="0 0 200 200"></svg>
+      <div class="speech" style="max-width:300px;" id="home-hello">안녕!<br>나는 시립대 마스코트 <b>이루매</b>야.<br>오늘의 메뉴, 내가 골라줄게! 🦅</div>
+      <button class="btn accent" style="max-width:300px;" onclick="startPick()">시작하기 🍽️</button>
+    </div>
+  </div>
+
+  <!-- ================= 뽑기 ================= -->
+  <div class="screen" id="pick">
+    <div class="appbar">🎲 뽑기</div>
+    <div class="stepbar" id="stepbar"><i></i><i></i><i></i><i></i><i></i></div>
+
+    <!-- step1 싱글/멀티 -->
+    <div class="content wizstep" id="step1">
+      <div class="title-lg">누구랑 먹나요?</div>
+      <div class="sub">싱글은 내 프로필만, 멀티는 친구 프로필까지 함께 반영해요.</div>
+      <div class="grid2">
+        <button class="tile" data-mode="single"><span class="em">🙋</span>싱글<br><small class="sub">혼밥 모드</small></button>
+        <button class="tile" data-mode="multi"><span class="em">👥</span>멀티<br><small class="sub">친구랑 같이</small></button>
+      </div>
+      <div id="friend-pick" style="display:none;">
+        <span class="label">함께 먹을 친구 선택 (복수 선택)</span>
+        <div class="chips" id="friend-chips"></div>
+        <div class="sub" id="no-friend-msg" style="display:none;margin-top:6px;">아직 친구가 없어요. 설정 → 친구목록에서 친구를 추가해 보세요!</div>
+      </div>
+    </div>
+
+    <!-- step2 땡겨요 -->
+    <div class="content wizstep" id="step2" style="display:none;">
+      <div class="title-lg">오늘 땡겨요 😋</div>
+      <div class="sub">우선하고 싶은 카테고리를 골라주세요. (복수 선택 가능, 건너뛰어도 돼요)</div>
+      <div class="chips" id="want-chips"></div>
+    </div>
+
+    <!-- step3 안돼요 -->
+    <div class="content wizstep" id="step3" style="display:none;">
+      <div class="title-lg">오늘 안돼요 🙅</div>
+      <div class="sub">오늘은 피하고 싶은 카테고리를 골라주세요. (복수 선택 가능)</div>
+      <div class="chips" id="avoid-chips"></div>
+    </div>
+
+    <!-- step4 거리 -->
+    <div class="content wizstep" id="step4" style="display:none;">
+      <div class="title-lg">어디까지 갈까요? 🚶</div>
+      <div class="sub">갈 의향이 있는 지역을 모두 골라주세요.</div>
+      <div class="grid3">
+        <button class="tile area-tile" data-a="시립대"><span class="em">🏫</span>시립대</button>
+        <button class="tile area-tile" data-a="청량리"><span class="em">🚉</span>청량리</button>
+        <button class="tile area-tile" data-a="회기"><span class="em">🎓</span>회기<br><small class="sub">(경희대)</small></button>
+      </div>
+    </div>
+
+    <!-- step5 최종 -->
+    <div class="content wizstep" id="step5" style="display:none;">
+      <div class="title-lg">이루매 PICK 🏆</div>
+      <div class="sub">조건에 딱 맞는 식당 TOP 5! 하나를 고르거나 랜덤박스에 맡겨보세요.<br><small>ⓘ 버튼을 누르면 식당 정보를 볼 수 있어요.</small></div>
+      <div id="top5-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <button class="btn gold" id="randombox" style="background:var(--gold);">🎁 랜덤박스 열기</button>
+      <button class="btn accent" id="confirm-pick" style="display:none;">이 식당으로 결정!</button>
+    </div>
+
+    <!-- 최종 결과 -->
+    <div class="content wizstep center" id="stepFinal" style="display:none;">
+      <svg id="irumae-final" width="150" height="150" viewBox="0 0 200 200"></svg>
+      <div class="speech" id="final-speech" style="width:100%;"></div>
+      <div class="card" id="final-card" style="width:100%;"></div>
+      <button class="btn ghost" onclick="startPick()">🔄 다시 뽑기</button>
+    </div>
+
+    <div class="wizfoot" id="wizfoot">
+      <button class="btn ghost" id="wiz-prev" style="flex:1;">이전</button>
+      <button class="btn" id="wiz-next" style="flex:2;">다음</button>
+    </div>
+  </div>
+
+  <!-- ================= 맛집 사전 ================= -->
+  <div class="screen" id="dict">
+    <div class="appbar">📖 맛집 사전</div>
+    <div class="content">
+      <div class="seg">
+        <button id="seg-region" class="on" onclick="dictTab('region')">지역별</button>
+        <button id="seg-college" onclick="dictTab('college')">단과대별</button>
+      </div>
+      <div id="dict-region">
+        <div class="grid3" style="margin-bottom:12px;">
+          <button class="tile" onclick="dictRegion('청량리')"><span class="em">🚉</span>청량리</button>
+          <button class="tile" onclick="dictRegion('시립대')"><span class="em">🏫</span>시립대</button>
+          <button class="tile" onclick="dictRegion('회기')"><span class="em">🎓</span>회기</button>
+        </div>
+        <div id="region-list" style="display:flex;flex-direction:column;gap:9px;"></div>
+      </div>
+      <div id="dict-college" style="display:none;">
+        <div class="grid3" id="college-grid" style="margin-bottom:12px;"></div>
+        <div id="college-list" style="display:flex;flex-direction:column;gap:9px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 설정 ================= -->
+  <div class="screen" id="settings">
+    <div class="appbar">⚙️ 설정</div>
+    <div class="content">
+      <div class="card" style="padding:6px 16px;">
+        <div class="set-item" onclick="openProfile()"><span class="em">👤</span><span class="tt">프로필</span><span class="arr">›</span></div>
+        <div class="set-item" onclick="showSub('friends')"><span class="em">🧑‍🤝‍🧑</span><span class="tt">친구목록</span><span class="arr">›</span></div>
+        <div class="set-item" onclick="showSub('contact')"><span class="em">✉️</span><span class="tt">문의하기</span><span class="arr">›</span></div>
+        <div class="set-item" onclick="showSub('setting')"><span class="em">🛠️</span><span class="tt">세팅</span><span class="arr">›</span></div>
+      </div>
+
+      <div class="card" id="sub-friends" style="display:none;">
+        <div style="font-weight:800;margin-bottom:10px;">🧑‍🤝‍🧑 친구목록</div>
+        <div id="friend-list"></div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <input type="text" id="add-friend-id" placeholder="친구 ID 입력">
+          <button class="btn sm" onclick="addFriendById()">추가</button>
+        </div>
+        <button class="btn ghost sm" style="width:100%;margin-top:8px;" onclick="copyInvite()">🔗 친구초대 링크 복사</button>
+      </div>
+
+      <div class="card" id="sub-contact" style="display:none;">
+        <div style="font-weight:800;margin-bottom:8px;">✉️ 문의하기</div>
+        <div class="sub" style="margin-bottom:10px;">제작자에게 이메일로 문의해 주세요.</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="contact-email" value="jepthacolston188@hotmail.com" readonly>
+          <button class="btn sm" onclick="copyEmail()">복사</button>
+        </div>
+      </div>
+
+      <div class="card" id="sub-setting" style="display:none;">
+        <div style="font-weight:800;margin-bottom:10px;">🛠️ 세팅</div>
+        <div class="set-item" onclick="toggleTheme()"><span class="em">🌗</span><span class="tt">다크 / 라이트 모드</span><span class="arr" id="theme-state">라이트</span></div>
+        <div class="set-item" onclick="logout()"><span class="em">🚪</span><span class="tt" style="color:var(--danger);">로그아웃</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 하단 네비 ================= -->
+  <div id="nav">
+    <button data-s="home" class="on"><span class="ico">🏠</span>홈</button>
+    <button data-s="pick"><span class="ico">🎲</span>뽑기</button>
+    <button data-s="dict"><span class="ico">📖</span>맛집 사전</button>
+    <button data-s="settings"><span class="ico">⚙️</span>설정</button>
+  </div>
+
+  <!-- ================= 모달 / 토스트 ================= -->
+  <div id="modal-bg" onclick="if(event.target===this)closeModal()"><div id="modal"></div></div>
+  <div id="toast"></div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ================================================================
+   데이터: 식당목록.xlsx (55곳, 수집일 2026-07-03, 출처 Google Places)
+   g: 7개 대분류 매핑 / region: 최근접 기준지점 / dist: 최단거리(m)
+   menus 가격은 추정치이며 실제와 다를 수 있음
+================================================================ */
+const CATS = ["한식","중식","일식","양식","분식","아시안","패스트푸드"];
+const COLLEGES = ["도시과학대","정경대","경영대","자연과학대","공과대","인문대","예체대","자유융합대","인공지능융합대"];
+const R = [
+{id:1,name:"리얼라면",g:"분식",cat:"분식(라면)",region:"회기",dist:35,addr:"동대문구 회기로25길 23-5",tel:"0507-1311-4208",rating:4.6,rev:170,hours:"목~화 11-15/17-21, 수 휴무",menus:[["라면(계란2개)",6500],["치즈라면",7000],["짬뽕라면",7500]],avg:7000},
+{id:2,name:"청량리역 구내식당",g:"한식",cat:"한식(백반뷔페)",region:"청량리",dist:47,addr:"동대문구 왕산로 214 (청량리역)",tel:"",rating:4.2,rev:5,hours:"정보 없음",menus:[["백반뷔페",7000]],avg:7000},
+{id:3,name:"한국집",g:"한식",cat:"한식(비빔밥)",region:"청량리",dist:55,addr:"동대문구 왕산로 214 (롯데백화점 청량리)",tel:"02-3707-1363",rating:4.3,rev:10,hours:"매일 09-21",menus:[["전주비빔밥",12000],["돌솥비빔밥",13000],["육회비빔밥",15000]],avg:13333},
+{id:4,name:"고기하다",g:"한식",cat:"고기/구이",region:"회기",dist:65,addr:"동대문구 경희대로4길 64 1층",tel:"070-4163-6616",rating:4.6,rev:68,hours:"매일 16-24",menus:[["목살 600g",29000],["계란볶음밥",4000],["된장찌개",6000]],avg:13000},
+{id:5,name:"하오섬(HAO'SUM) 청량리점",g:"중식",cat:"중식(딤섬)",region:"청량리",dist:69,addr:"동대문구 왕산로 214 (청량리역 3층)",tel:"",rating:4.1,rev:18,hours:"매일 11-22",menus:[["하가우(새우교자)",8500],["샤오롱바오",9000],["우육면",13000]],avg:10167},
+{id:6,name:"칼리앤메리",g:"한식",cat:"한식(덮밥/소바)",region:"시립대",dist:92,addr:"동대문구 전농제2동 150 (시립대 정문)",tel:"",rating:5.0,rev:1,hours:"매일 11-20:30",menus:[["소소세트(덮밥+소바)",7500],["빅세트",9500],["제육덮밥",7000]],avg:8000},
+{id:7,name:"국수천천히",g:"한식",cat:"한식(국수)",region:"시립대",dist:94,addr:"동대문구 전농동 124-25 1층",tel:"",rating:4.5,rev:19,hours:"매일 11-20",menus:[["잔치국수",5500],["비빔국수",6000],["비빔밥",6500]],avg:6000},
+{id:8,name:"해피디쉬클럽",g:"양식",cat:"양식/펍",region:"시립대",dist:98,addr:"동대문구 전농동 (시립대 인근)",tel:"010-2608-8249",rating:4.4,rev:102,hours:"매일 17-01 (금토 -02)",menus:[["감바스",15000],["화덕피자",16000],["파스타",14000]],avg:15000},
+{id:9,name:"마루한",g:"한식",cat:"고기/구이",region:"시립대",dist:109,addr:"동대문구 서울시립대로27길 3",tel:"02-6406-1126",rating:4.2,rev:48,hours:"정보 없음",menus:[["두툼삼겹살(1인분)",16000],["갈비탕",12000],["차돌된장찌개",9000]],avg:12333},
+{id:10,name:"윤가네",g:"분식",cat:"분식",region:"시립대",dist:125,addr:"동대문구 전농동 150-8 1층",tel:"02-2212-2638",rating:4.2,rev:6,hours:"매일 10-20",menus:[["치즈라볶이",6000],["김치볶음밥",6500],["돈까스",8000]],avg:6833},
+{id:11,name:"오뚝식당",g:"한식",cat:"한식/전통주점",region:"회기",dist:134,addr:"동대문구 회기동 45-94",tel:"02-966-6680",rating:4.5,rev:12,hours:"매일 11:30-22",menus:[["항정살수육",25000],["트러플된장밥",12000],["녹두삼계탕",16000]],avg:17667},
+{id:12,name:"최원석의 돼지한판 시립대점",g:"한식",cat:"고기/구이",region:"시립대",dist:138,addr:"동대문구 전농로 222",tel:"02-2213-5592",rating:4.5,rev:125,hours:"매일 11:30-01",menus:[["삼겹살(1인분)",13000],["목살(1인분)",13000],["쭈꾸미볶음",12000]],avg:12667},
+{id:13,name:"정육정",g:"한식",cat:"고기/구이",region:"시립대",dist:169,addr:"동대문구 전농동 103-94",tel:"0507-1403-8889",rating:4.4,rev:13,hours:"매일 11-23",menus:[["삼겹살(1인분)",14000],["김치찌개",8000],["제육볶음",10000]],avg:10667},
+{id:14,name:"오뚜기왕돈까스",g:"일식",cat:"돈카츠",region:"시립대",dist:186,addr:"동대문구 전농동 103-84 지하1층",tel:"02-2215-5007",rating:4.2,rev:63,hours:"월~금 11:30-21, 주말 휴무",menus:[["왕돈까스",10000],["치즈돈까스",11000],["생선까스",11000]],avg:10667},
+{id:15,name:"로운 샤브샤브 청량리점",g:"아시안",cat:"샤브샤브(뷔페)",region:"청량리",dist:189,addr:"동대문구 전농제1동 (롯데백 지하)",tel:"0507-1337-2031",rating:4.0,rev:86,hours:"매일 10:30-21",menus:[["샤브 런치뷔페",14900],["샤브 디너뷔페",19900]],avg:17400},
+{id:16,name:"봄봄기사식당",g:"한식",cat:"한식(백반)",region:"시립대",dist:192,addr:"동대문구 전농동 129-68",tel:"",rating:4.2,rev:121,hours:"매일 11-22",menus:[["오징어볶음",9000],["고등어구이",9000],["돼지불백",9000]],avg:9000},
+{id:17,name:"송정돌솥밥",g:"한식",cat:"한식(돌솥밥)",region:"시립대",dist:201,addr:"동대문구 서울시립대로 129",tel:"02-2212-9946",rating:4.1,rev:74,hours:"월~토 08-21, 일 휴무",menus:[["돼지불백",11000],["오징어볶음",11000],["오삼불고기",13000]],avg:11667},
+{id:18,name:"산촌쌈밥",g:"한식",cat:"한식(쌈밥)",region:"청량리",dist:204,addr:"동대문구 서울시립대로 75 105호",tel:"",rating:4.6,rev:14,hours:"정보 없음",menus:[["우렁쌈밥",12000],["제육쌈밥",12000],["동태찌개",10000]],avg:11333},
+{id:19,name:"경북손칼국수",g:"한식",cat:"한식(칼국수)",region:"청량리",dist:218,addr:"동대문구 왕산로41길 4",tel:"02-963-6962",rating:4.3,rev:176,hours:"월~토 10-21, 일 휴무",menus:[["손칼국수",8000],["콩국수",9000],["배추전",7000]],avg:8000},
+{id:20,name:"모코모코",g:"일식",cat:"일식(마제소바)",region:"회기",dist:223,addr:"동대문구 회기동 16-92 2층",tel:"0507-1431-5081",rating:4.7,rev:51,hours:"월~토 11-15/17-20, 일 휴무",menus:[["마제소바",9500],["키마카레우동",9500],["돈카츠",10000]],avg:9667},
+{id:21,name:"멍군집",g:"한식",cat:"고기/구이",region:"회기",dist:232,addr:"동대문구 회기동 60-6",tel:"010-8001-2264",rating:4.7,rev:202,hours:"매일 16-24 (일 15-24)",menus:[["삼겹살(1인분)",9000],["목살(1인분)",9000],["김치찌개",6000]],avg:8000},
+{id:22,name:"정편백",g:"한식",cat:"한식(편백찜)",region:"청량리",dist:238,addr:"동대문구 서울시립대로12길 3",tel:"010-2035-8884",rating:4.4,rev:79,hours:"매일 11-22",menus:[["편백숙성수육찜(소)",35000],["육회비빔밥",12000],["메밀국수",8000]],avg:18333},
+{id:23,name:"삼화기사식당",g:"한식",cat:"한식(백반)",region:"청량리",dist:246,addr:"동대문구 전농동 676-2",tel:"02-2213-3976",rating:4.3,rev:62,hours:"매일 11-21",menus:[["백반",8000],["돌솥밥정식",9000],["생선구이",10000]],avg:9000},
+{id:24,name:"회기왕갈비탕",g:"한식",cat:"한식(갈비탕)",region:"회기",dist:253,addr:"동대문구 이문로 54 1층",tel:"0507-1354-1083",rating:4.8,rev:190,hours:"매일 10-21",menus:[["왕갈비탕",15000],["특왕갈비탕",18000]],avg:16500},
+{id:25,name:"전현필식당",g:"양식",cat:"양식(파스타)",region:"청량리",dist:255,addr:"동대문구 전농동 530-83",tel:"0507-1425-6188",rating:4.7,rev:17,hours:"정보 없음",menus:[["트러플크림리조또",16000],["오일파스타",14000],["샐러드",9000]],avg:13000},
+{id:26,name:"일구구삼고기",g:"한식",cat:"고기/구이",region:"회기",dist:257,addr:"동대문구 회기로19길 18 1층",tel:"010-7441-3222",rating:4.8,rev:28,hours:"월~금 11:30-23, 주말 15-23",menus:[["삼겹살(1인분)",13000],["목살(1인분)",13000],["김치찌개",7000]],avg:11000},
+{id:27,name:"여기가좋겠네",g:"한식",cat:"한식(닭볶음탕)",region:"회기",dist:270,addr:"동대문구 회기로21길 25",tel:"02-968-9112",rating:4.1,rev:575,hours:"월~토 10:30-01, 일 휴무",menus:[["닭볶음탕(소)",13000],["고기떡볶이",8000],["닭볶음탕(중)",18000]],avg:13000},
+{id:28,name:"새마을식당 청량리점",g:"한식",cat:"고기/구이",region:"시립대",dist:344,addr:"동대문구 왕산로 270",tel:"02-959-8480",rating:4.4,rev:20,hours:"매일 11-21:30",menus:[["7분돼지김치",9000],["연탄불고기",10000],["김치찌개",8000]],avg:9000},
+{id:29,name:"거북이식당",g:"한식",cat:"고기/구이",region:"회기",dist:345,addr:"동대문구 경희대로3길 6 (회기동)",tel:"0507-1373-1559",rating:4.9,rev:465,hours:"월~금 14-23, 주말 12-23",menus:[["생삼겹살",14000],["생목살",14000],["순두부찌개",7000]],avg:11667},
+{id:30,name:"고향집 아바이순대국",g:"한식",cat:"한식(순대국)",region:"청량리",dist:371,addr:"동대문구 청량리동 741",tel:"02-964-8844",rating:4.1,rev:421,hours:"월~토 09-22, 일 휴무",menus:[["순대국",9000],["아바이순대",12000],["머리고기",15000]],avg:12000},
+{id:31,name:"혜성칼국수",g:"한식",cat:"한식(칼국수)",region:"청량리",dist:371,addr:"동대문구 왕산로 247-1",tel:"02-967-6918",rating:4.2,rev:1283,hours:"화~일 10-21, 월 휴무",menus:[["멸치칼국수",9000],["닭칼국수",9500]],avg:9250},
+{id:32,name:"도래집 회기점",g:"한식",cat:"곱창/막창",region:"회기",dist:374,addr:"동대문구 경희대로1가길 3",tel:"02-969-4370",rating:4.9,rev:29,hours:"월~토 17-02, 일 휴무",menus:[["도래창",18000],["소금막창",17000],["곱창",16000]],avg:17000},
+{id:33,name:"우리집식당",g:"한식",cat:"한식(보리밥)",region:"청량리",dist:382,addr:"동대문구 청량리동 50-17",tel:"02-960-2340",rating:4.1,rev:31,hours:"매일 11-21:30",menus:[["보리밥정식",9000],["된장찌개",8000],["제육볶음",12000]],avg:9667},
+{id:34,name:"광주식당",g:"한식",cat:"한식(청국장)",region:"청량리",dist:388,addr:"동대문구 청량리동 773 (청량리시장)",tel:"02-969-4403",rating:4.0,rev:1024,hours:"화~일 09-21, 월 휴무",menus:[["청국장",9000],["오징어볶음",10000],["동태찌개",10000]],avg:9667},
+{id:35,name:"경돈",g:"한식",cat:"고기/구이(숙성삼겹)",region:"청량리",dist:397,addr:"동대문구 홍릉로1길 15",tel:"",rating:4.6,rev:11,hours:"정보 없음",menus:[["숙성삼겹살",15000],["숙성목살",15000],["김치찌개",7000]],avg:12333},
+{id:36,name:"황해도순대",g:"한식",cat:"한식(순대)",region:"청량리",dist:397,addr:"동대문구 홍릉로1길 21 1층",tel:"02-962-4123",rating:3.8,rev:63,hours:"월~토 07:30-19, 일 08-17",menus:[["순대(포장)",10000],["야채순대",12000],["머리고기",12000]],avg:11333},
+{id:37,name:"어흥식당",g:"양식",cat:"양식(함박/스테이크)",region:"회기",dist:397,addr:"동대문구 회기로13길 22",tel:"010-4964-0859",rating:4.5,rev:67,hours:"월~토 11-21, 일 휴무",menus:[["함박스테이크",9900],["스테이크 300g",15300],["반반(함박+스테이크)",13000]],avg:12733},
+{id:38,name:"제주미향해장 청량리점",g:"한식",cat:"한식(해장국)",region:"청량리",dist:448,addr:"동대문구 청량리동 790",tel:"02-6949-3353",rating:4.4,rev:220,hours:"매일 07-24",menus:[["선지해장국",11000],["내장탕",12000],["수육(소)",25000]],avg:16000},
+{id:39,name:"봄의정원 회기점",g:"양식",cat:"양식",region:"회기",dist:449,addr:"동대문구 경희대로1길 35",tel:"0507-1363-7382",rating:4.4,rev:53,hours:"매일 11:30-21:30",menus:[["파스타",15000],["리조또",16000],["스테이크",28000]],avg:19667},
+{id:40,name:"할머니냉면",g:"한식",cat:"한식(냉면)",region:"청량리",dist:454,addr:"동대문구 왕산로37길 51",tel:"02-963-5362",rating:4.0,rev:1666,hours:"매일 10-21:30",menus:[["비빔냉면",8000]],avg:8000},
+{id:41,name:"오관스시",g:"일식",cat:"일식(스시)",region:"회기",dist:461,addr:"동대문구 회기동 60-101",tel:"070-8225-6369",rating:4.6,rev:277,hours:"월~토 점심/저녁 영업, 일 휴무",menus:[["런치 오마카세",40000],["디너 오마카세",60000],["초밥세트",25000]],avg:41667},
+{id:42,name:"신락원",g:"중식",cat:"중식",region:"시립대",dist:502,addr:"동대문구 전농로20길 2",tel:"02-2244-0008",rating:4.2,rev:548,hours:"화~일 11:30-15/17-22, 월 휴무",menus:[["짜장면",7000],["짬뽕",8000],["탕수육(소)",20000]],avg:11667},
+{id:43,name:"은하곱창",g:"한식",cat:"곱창",region:"시립대",dist:552,addr:"동대문구 전농로15길 22",tel:"02-2247-0254",rating:4.1,rev:764,hours:"월~금 11-22, 토 11-21, 일 휴무",menus:[["곱창(1인분)",10000],["곱창전골(1인)",12000],["볶음밥",3000]],avg:8333},
+{id:44,name:"충청도식당",g:"한식",cat:"한식(백반)",region:"청량리",dist:575,addr:"동대문구 제기동 549",tel:"02-963-5506",rating:4.2,rev:86,hours:"매일 06-19",menus:[["백반",7000],["순두부찌개",8000],["청국장",8000]],avg:7667},
+{id:45,name:"럭키식당",g:"한식",cat:"한식(부대찌개)",region:"회기",dist:626,addr:"동대문구 망우로18가길 77",tel:"",rating:4.2,rev:137,hours:"정보 없음",menus:[["부대찌개(1인)",7000],["치즈돈까스",9000],["김치볶음밥",7500]],avg:7833},
+{id:46,name:"장수회관",g:"한식",cat:"한식(고기/구이)",region:"시립대",dist:632,addr:"동대문구 전농로16길 16",tel:"02-2243-5678",rating:4.2,rev:262,hours:"매일 11-21 (일 11:30-22)",menus:[["돼지갈비(1인분)",15000],["소갈비살(1인분)",28000],["냉면",9000]],avg:17333},
+{id:47,name:"반지하돈부리",g:"일식",cat:"일식(돈부리)",region:"시립대",dist:668,addr:"동대문구 망우로18다길 44",tel:"02-3394-8111",rating:4.1,rev:34,hours:"매일 11-15/17-20",menus:[["가츠동",9000],["사케동",12000],["텐동",10000]],avg:10333},
+{id:48,name:"다퍼줘",g:"한식",cat:"해산물",region:"청량리",dist:681,addr:"동대문구 왕산로 155 (제기동)",tel:"010-7601-2020",rating:4.1,rev:237,hours:"목~화 10-22, 수 휴무",menus:[["개불",15000],["오징어회",20000],["모둠회",30000]],avg:21667},
+{id:49,name:"후루사토",g:"일식",cat:"일식(이자카야)",region:"회기",dist:714,addr:"동대문구 휘경동 294-165",tel:"0507-1314-8563",rating:4.3,rev:47,hours:"화~일 17-01, 월 휴무",menus:[["안주 오마카세(1인)",10000],["하이볼",7000],["숙성회",20000]],avg:12333},
+{id:50,name:"우정식당",g:"한식",cat:"한식(백반)",region:"시립대",dist:750,addr:"동대문구 망우로18라길 33 (휘경동)",tel:"",rating:4.4,rev:10,hours:"매일 11:30-21",menus:[["백반",8000],["제육볶음",9000],["김치찌개",8000]],avg:8333},
+{id:51,name:"강박사돌쇱쌈밥생삼겹살",g:"한식",cat:"한식(쌈밥)",region:"시립대",dist:760,addr:"동대문구 전농로14길 3",tel:"010-8853-9841",rating:4.4,rev:233,hours:"매일 11-22",menus:[["고추장불고기쌈밥",12000],["냉동삼겹쌈밥",13000],["생삼겹살(1인분)",14000]],avg:13000},
+{id:52,name:"경동밥상 한식뷔페",g:"한식",cat:"뷔페(한식)",region:"청량리",dist:775,addr:"동대문구 고산자로36길 3",tel:"",rating:5.0,rev:1,hours:"정보 없음",menus:[["한식뷔페",8000]],avg:8000},
+{id:53,name:"바른식당 다림방",g:"한식",cat:"고기/구이",region:"시립대",dist:929,addr:"동대문구 전농로14길 49",tel:"02-2213-9752",rating:4.3,rev:50,hours:"매일 11-22",menus:[["제주생삼겹(1인분)",16000],["왕갈비탕",13000],["소시지구이",12000]],avg:13667},
+{id:54,name:"가위바위보떡볶이 휘경여고점",g:"분식",cat:"분식",region:"시립대",dist:1316,addr:"동대문구 한천로46가길 1",tel:"02-6015-4949",rating:4.3,rev:24,hours:"화~일 11:30-22 (월 15:30-)",menus:[["떡볶이(1인)",4500],["김밥",3500],["쫄면",4000]],avg:4000},
+{id:55,name:"근처식당",g:"아시안",cat:"아시안(동남아)",region:"회기",dist:1562,addr:"성북구 회기로3길 2",tel:"010-7470-4393",rating:4.3,rev:248,hours:"매일 11:30-21 (주말 12-)",menus:[["분짜",12000],["팟타이",12000],["쌀국수",11000]],avg:11667}
+];
+
+/* ================================================================ 상태 ================================================================ */
+const LS = {profile:"irumae_profile", friends:"irumae_friends", theme:"irumae_theme"};
+/* 모드: config.js에 Supabase 키가 있으면 클라우드, 없으면 로컬(localStorage) */
+const CLOUD = !!(window.SUPABASE_URL && window.SUPABASE_ANON_KEY);
+const sb = CLOUD ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY) : null;
+let cloudUid = null;
+let profile = null, friends = [];
+if(!CLOUD){
+  profile = JSON.parse(localStorage.getItem(LS.profile)||"null");
+  friends = JSON.parse(localStorage.getItem(LS.friends)||"null");
+  if(!friends){ // 데모용 기본 친구
+    friends=[
+      {id:"minsu01",name:"김민수",college:"공과대",pref:["한식","분식"],cant:"곱창",allergy:""},
+      {id:"jiwoo22",name:"박지우",college:"경영대",pref:["일식","양식"],cant:"",allergy:"새우"},
+      {id:"haeun05",name:"이하은",college:"인문대",pref:["중식","아시안"],cant:"순대",allergy:""}
+    ];
+    localStorage.setItem(LS.friends,JSON.stringify(friends));
+  }
+}
+let wiz = {step:1, mode:null, mates:[], want:[], avoid:[], areas:[], top5:[], picked:null};
+
+/* ================================================================ Supabase 연동 ================================================================ */
+function rowToProfile(r){ return {uid:r.id,id:r.username,name:r.name,year:r.year,gender:r.gender,college:r.college,pref:r.pref||[],cant:r.cant||"",allergy:r.allergy||""}; }
+function greet(){ $("#home-hello").innerHTML=`안녕 <b>${profile.name}</b>!<br>나는 시립대 마스코트 <b>이루매</b>야.<br>오늘의 메뉴, 내가 골라줄게! 🦅`; }
+async function bootCloud(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){ go("auth"); return; }
+  cloudUid = session.user.id;
+  const {data:row,error} = await sb.from("profiles").select("*").eq("id",cloudUid).maybeSingle();
+  if(error){ toast("프로필 로딩 실패: "+error.message); go("auth"); return; }
+  if(!row){ profile=null; $("#signup-sub").textContent="프로필을 설정하고 시작해요!"; go("signup"); return; }
+  profile=rowToProfile(row);
+  await loadFriendsCloud();
+  await handleInvite();
+  greet(); go("home");
+}
+async function loadFriendsCloud(){
+  const {data,error} = await sb.from("friends")
+    .select("friend:profiles!friends_friend_id_fkey(*)").eq("user_id",cloudUid);
+  friends = error ? [] : (data||[]).map(x=>rowToProfile(x.friend));
+}
+async function addFriendCloud(username){
+  const {data:p} = await sb.from("profiles").select("*").eq("username",username).maybeSingle();
+  if(!p){ toast("해당 ID의 사용자를 찾을 수 없어요!"); return false; }
+  if(p.id===cloudUid){ toast("본인은 추가할 수 없어요!"); return false; }
+  const {error} = await sb.from("friends").insert({user_id:cloudUid,friend_id:p.id});
+  if(error){ toast(error.code==="23505"?"이미 추가된 친구예요!":"추가에 실패했어요."); return false; }
+  await loadFriendsCloud(); toast(`${p.name}(@${username})님을 추가했어요!`); return true;
+}
+async function handleInvite(){
+  const inv=new URLSearchParams(location.search).get("invite");
+  if(inv && profile && inv!==profile.id){
+    await addFriendCloud(inv);
+    history.replaceState(null,"",location.pathname);
+  }
+}
+async function authSignIn(){
+  const email=$("#a-email").value.trim(), pw=$("#a-pw").value;
+  if(!email||!pw){ toast("이메일과 비밀번호를 입력해 주세요!"); return; }
+  const {error}=await sb.auth.signInWithPassword({email,password:pw});
+  if(error){ toast("로그인 실패: "+error.message); return; }
+  bootCloud();
+}
+async function authSignUp(){
+  const email=$("#a-email").value.trim(), pw=$("#a-pw").value;
+  if(!email||pw.length<6){ toast("이메일과 6자 이상 비밀번호를 입력해 주세요!"); return; }
+  const {data,error}=await sb.auth.signUp({email,password:pw});
+  if(error){ toast("회원가입 실패: "+error.message); return; }
+  if(!data.session){ toast("확인 메일을 보냈어요! 메일 인증 후 로그인해 주세요. ✉️"); return; }
+  bootCloud();
+}
+
+/* ================================================================ 이루매 SVG ================================================================ */
+function irumaeSVG(mood){ // mood: 'hi' | 'yay'
+  const wing = mood==='yay'
+    ? '<path d="M38 95 Q10 60 30 40 Q45 62 55 80Z" fill="#0D4A8F"/><path d="M162 95 Q190 60 170 40 Q155 62 145 80Z" fill="#0D4A8F"/>'
+    : '<path d="M40 110 Q12 100 18 70 Q40 82 52 96Z" fill="#0D4A8F"/><path d="M160 110 Q188 100 182 70 Q160 82 148 96Z" fill="#0D4A8F"/>';
+  return `
+  <ellipse cx="100" cy="185" rx="52" ry="9" fill="rgba(0,0,0,.12)"/>
+  ${wing}
+  <ellipse cx="100" cy="118" rx="55" ry="60" fill="#1565C0"/>
+  <ellipse cx="100" cy="132" rx="36" ry="42" fill="#FFF6E8"/>
+  <circle cx="100" cy="66" r="44" fill="#1565C0"/>
+  <path d="M62 52 Q58 24 84 30 Q74 42 76 50Z" fill="#0D4A8F"/>
+  <path d="M138 52 Q142 24 116 30 Q126 42 124 50Z" fill="#0D4A8F"/>
+  <circle cx="84" cy="62" r="13" fill="#fff"/><circle cx="116" cy="62" r="13" fill="#fff"/>
+  <circle cx="86" cy="64" r="6" fill="#1B2430"/><circle cx="114" cy="64" r="6" fill="#1B2430"/>
+  <circle cx="88" cy="62" r="2" fill="#fff"/><circle cx="116" cy="62" r="2" fill="#fff"/>
+  <path d="M92 80 Q100 92 108 80 Q104 74 100 76 Q96 74 92 80Z" fill="#F5B031"/>
+  <ellipse cx="72" cy="78" rx="7" ry="4.5" fill="#FF9EA0" opacity=".7"/>
+  <ellipse cx="128" cy="78" rx="7" ry="4.5" fill="#FF9EA0" opacity=".7"/>
+  <path d="M85 168 L80 182 M100 170 L100 184 M115 168 L120 182" stroke="#F5B031" stroke-width="6" stroke-linecap="round"/>
+  ${mood==='yay' ? '<text x="30" y="30" font-size="20">✨</text><text x="152" y="26" font-size="20">✨</text>' : ''}`;
+}
+
+/* ================================================================ 공통 UI ================================================================ */
+const $ = s=>document.querySelector(s), $$ = s=>[...document.querySelectorAll(s)];
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.style.display="block";
+  clearTimeout(t._tm); t._tm=setTimeout(()=>t.style.display="none",1800); }
+function go(id){
+  $$(".screen").forEach(s=>s.classList.remove("active"));
+  $("#"+id).classList.add("active");
+  $$("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.s===id));
+  window.scrollTo(0,0);
+}
+$$("#nav button").forEach(b=>b.onclick=()=>{ if(b.dataset.s==="pick") startPick(); else go(b.dataset.s); });
+function won(n){ return n.toLocaleString("ko-KR")+"원"; }
+function copyText(txt,msg){
+  const done=()=>toast(msg);
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done).catch(()=>fallback()); }
+  else fallback();
+  function fallback(){ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta);
+    ta.select(); document.execCommand("copy"); ta.remove(); done(); }
+}
+
+/* ---------- 식당 정보 모달 ---------- */
+function openModal(html){ $("#modal").innerHTML=html; $("#modal-bg").classList.add("open"); }
+function closeModal(){ $("#modal-bg").classList.remove("open"); }
+function restCard(r){
+  return `
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+    <div style="font-size:19px;font-weight:800;flex:1;">${r.name}</div>
+    <span class="badge">${r.region}</span>
+  </div>
+  <div class="sub">${r.cat} · ⭐ ${r.rating.toFixed(1)} (리뷰 ${r.rev.toLocaleString()}개)</div>
+  <div class="info-row"><span class="k">📍 주소</span><span>${r.addr}</span></div>
+  <div class="info-row"><span class="k">🚶 거리</span><span>${r.region} 기준 약 ${r.dist}m</span></div>
+  <div class="info-row"><span class="k">🕐 영업</span><span>${r.hours}</span></div>
+  ${r.tel?`<div class="info-row"><span class="k">📞 전화</span><span>${r.tel}</span></div>`:""}
+  <div style="margin-top:14px;font-weight:800;font-size:14px;">대표 메뉴 <small class="sub">(가격은 추정치)</small></div>
+  <div style="margin-top:4px;">${r.menus.map(m=>`<div class="menu-row"><span>${m[0]}</span><b>${won(m[1])}</b></div>`).join("")}</div>
+  <div class="menu-row" style="border-top:1.5px solid var(--line);margin-top:2px;"><span>평균 가격</span><b style="color:var(--accent);">${won(r.avg)}</b></div>`;
+}
+function showRest(id){ const r=R.find(x=>x.id===id); openModal(restCard(r)+`<button class="btn ghost" style="margin-top:16px;" onclick="closeModal()">닫기</button>`); }
+
+/* ================================================================ 회원가입 / 프로필 ================================================================ */
+function buildSignupForm(){
+  const y=$("#p-year"); y.innerHTML="";
+  for(let i=2026;i>=2016;i--) y.innerHTML+=`<option>${i}</option>`;
+  $("#p-college").innerHTML=COLLEGES.map(c=>`<option>${c}</option>`).join("");
+  $("#p-pref").innerHTML=CATS.map(c=>`<span class="chip" data-v="${c}">${c}</span>`).join("");
+  $$("#p-pref .chip").forEach(ch=>ch.onclick=()=>ch.classList.toggle("sel"));
+  $$("#p-gender .chip").forEach(ch=>ch.onclick=()=>{$$("#p-gender .chip").forEach(x=>x.classList.remove("sel"));ch.classList.add("sel");});
+  $$("#p-allergy-yn .chip").forEach(ch=>ch.onclick=()=>{
+    $$("#p-allergy-yn .chip").forEach(x=>x.classList.remove("sel")); ch.classList.add("sel");
+    $("#p-allergy").style.display = ch.dataset.v==="있음" ? "block":"none";
+  });
+}
+function fillSignupForm(p){
+  $("#p-name").value=p.name; $("#p-id").value=p.id; $("#p-year").value=p.year;
+  $("#p-college").value=p.college; $("#p-cant").value=p.cant;
+  $$("#p-gender .chip").forEach(ch=>ch.classList.toggle("sel",ch.dataset.v===p.gender));
+  $$("#p-pref .chip").forEach(ch=>ch.classList.toggle("sel",p.pref.includes(ch.dataset.v)));
+  const yn = p.allergy ? "있음":"없음";
+  $$("#p-allergy-yn .chip").forEach(ch=>ch.classList.toggle("sel",ch.dataset.v===yn));
+  $("#p-allergy").style.display = p.allergy?"block":"none"; $("#p-allergy").value=p.allergy;
+}
+$("#signup-save").onclick=async ()=>{
+  const name=$("#p-name").value.trim(), id=$("#p-id").value.trim();
+  const gender=($("#p-gender .chip.sel")||{}).dataset ? $("#p-gender .chip.sel").dataset.v : "";
+  if(!name||!id){ toast("이름과 아이디를 입력해 주세요!"); return; }
+  if(!gender){ toast("성별을 선택해 주세요!"); return; }
+  const allergyYn=$("#p-allergy-yn .chip.sel");
+  const p={ name,id, year:$("#p-year").value, gender, college:$("#p-college").value,
+    pref:$$("#p-pref .chip.sel").map(c=>c.dataset.v),
+    cant:$("#p-cant").value.trim(),
+    allergy:(allergyYn&&allergyYn.dataset.v==="있음")?$("#p-allergy").value.trim():"" };
+  if(CLOUD){
+    if(!cloudUid){ toast("먼저 로그인해 주세요!"); go("auth"); return; }
+    const {error}=await sb.from("profiles").upsert({ id:cloudUid, username:p.id, name:p.name,
+      year:+p.year, gender:p.gender, college:p.college, pref:p.pref, cant:p.cant, allergy:p.allergy });
+    if(error){ toast(error.code==="23505"?"이미 사용 중인 아이디예요!":"저장 실패: "+error.message); return; }
+    profile={uid:cloudUid,...p};
+    await loadFriendsCloud(); await handleInvite();
+  }else{
+    profile=p;
+    localStorage.setItem(LS.profile,JSON.stringify(profile));
+  }
+  toast(`${name}님 환영해요! 🎉`);
+  greet(); go("home");
+};
+function openProfile(){
+  if(!profile){ go(CLOUD&&!cloudUid?"auth":"signup"); return; }
+  fillSignupForm(profile); $("#signup-sub").textContent="프로필을 수정할 수 있어요"; go("signup");
+}
+
+/* ================================================================ 뽑기 위저드 ================================================================ */
+function startPick(){
+  if(!profile){
+    const needLogin=CLOUD&&!cloudUid;
+    toast(needLogin?"먼저 로그인해 주세요!":"먼저 프로필을 설정해 주세요!");
+    go(needLogin?"auth":"signup"); return;
+  }
+  wiz={step:1,mode:null,mates:[],want:[],avoid:[],areas:[],top5:[],picked:null};
+  buildWizard(); showStep(1); go("pick");
+}
+function buildWizard(){
+  $("#want-chips").innerHTML=CATS.map(c=>`<span class="chip" data-v="${c}">${c}</span>`).join("");
+  $("#avoid-chips").innerHTML=CATS.map(c=>`<span class="chip" data-v="${c}">${c}</span>`).join("");
+  $$("#want-chips .chip").forEach(ch=>ch.onclick=()=>{ ch.classList.toggle("sel"); syncWizChips(); });
+  $$("#avoid-chips .chip").forEach(ch=>ch.onclick=()=>{ ch.classList.toggle("sel-red"); syncWizChips(); });
+  $$("#step1 .tile").forEach(t=>t.onclick=()=>{
+    wiz.mode=t.dataset.mode;
+    $$("#step1 .tile").forEach(x=>x.style.borderColor="transparent");
+    t.style.border="2px solid var(--accent)";
+    const fp=$("#friend-pick");
+    if(wiz.mode==="multi"){ fp.style.display="block"; renderFriendChips(); } else { fp.style.display="none"; wiz.mates=[]; }
+  });
+  $$(".area-tile").forEach(t=>{ t.style.border="2px solid transparent";
+    t.onclick=()=>{
+      const a=t.dataset.a;
+      if(wiz.areas.includes(a)){ wiz.areas=wiz.areas.filter(x=>x!==a); t.style.border="2px solid transparent"; }
+      else { wiz.areas.push(a); t.style.border="2px solid var(--accent)"; }
+    };
+  });
+}
+function syncWizChips(){
+  wiz.want=$$("#want-chips .chip.sel").map(c=>c.dataset.v);
+  wiz.avoid=$$("#avoid-chips .chip.sel-red").map(c=>c.dataset.v);
+}
+function renderFriendChips(){
+  const box=$("#friend-chips");
+  $("#no-friend-msg").style.display = friends.length?"none":"block";
+  box.innerHTML=friends.map(f=>`<span class="chip" data-id="${f.id}">${f.name}</span>`).join("");
+  $$("#friend-chips .chip").forEach(ch=>ch.onclick=()=>{
+    ch.classList.toggle("sel");
+    wiz.mates=$$("#friend-chips .chip.sel").map(c=>friends.find(f=>f.id===c.dataset.id));
+  });
+}
+function showStep(n){
+  wiz.step=n;
+  $$(".wizstep").forEach(s=>s.style.display="none");
+  $("#"+(n<=5?"step"+n:"stepFinal")).style.display="flex";
+  $$("#stepbar i").forEach((b,i)=>b.classList.toggle("done",i<n));
+  $("#wizfoot").style.display = n<=5 ? "flex":"none";
+  $("#wiz-prev").style.visibility = n===1 ? "hidden":"visible";
+  $("#wiz-next").textContent = n===4 ? "결과 보기 🎯" : n===5 ? "" : "다음";
+  $("#wiz-next").style.display = n===5 ? "none":"block";
+  if(n===5) renderTop5();
+}
+$("#wiz-prev").onclick=()=>showStep(wiz.step-1);
+$("#wiz-next").onclick=()=>{
+  if(wiz.step===1){
+    if(!wiz.mode){ toast("싱글 또는 멀티를 선택해 주세요!"); return; }
+    if(wiz.mode==="multi"&&!wiz.mates.length){ toast("함께 먹을 친구를 선택해 주세요!"); return; }
+  }
+  if(wiz.step===3){
+    const both=wiz.want.filter(c=>wiz.avoid.includes(c));
+    if(both.length){ toast(`'${both[0]}'는 땡겨요와 안돼요에 동시에 있어요!`); return; }
+  }
+  if(wiz.step===4&&!wiz.areas.length){ toast("지역을 하나 이상 선택해 주세요!"); return; }
+  showStep(wiz.step+1);
+};
+
+/* ---------- 추천 점수 계산 ---------- */
+function keywordsOf(person){
+  const kw=[];
+  (person.cant||"").split(",").forEach(s=>{s=s.trim(); if(s)kw.push(s);});
+  (person.allergy||"").split(",").forEach(s=>{s=s.trim(); if(s)kw.push(s);});
+  return kw;
+}
+function violates(r,kw){
+  const hay=r.name+r.cat+r.menus.map(m=>m[0]).join("");
+  return kw.some(k=>hay.includes(k));
+}
+function recommend(){
+  const people=[profile,...(wiz.mode==="multi"?wiz.mates:[])];
+  const banned=people.flatMap(keywordsOf);
+  let pool=R.filter(r=>wiz.areas.includes(r.region))
+            .filter(r=>!wiz.avoid.includes(r.g))
+            .filter(r=>!violates(r,banned));
+  const scored=pool.map(r=>{
+    let s = r.rating*10 + Math.log(r.rev+1)*3;        // 평점 + 리뷰 신뢰도
+    if(wiz.want.includes(r.g)) s+=35;                  // 오늘 땡겨요
+    people.forEach(p=>{ if((p.pref||[]).includes(r.g)) s+=12; }); // 프로필 선호
+    s -= r.dist/150;                                    // 거리 패널티
+    return {r,s};
+  }).sort((a,b)=>b.s-a.s);
+  return scored.slice(0,5).map(x=>x.r);
+}
+function renderTop5(){
+  wiz.top5=recommend(); wiz.picked=null;
+  $("#confirm-pick").style.display="none";
+  const box=$("#top5-list");
+  if(!wiz.top5.length){
+    box.innerHTML=`<div class="card sub">조건에 맞는 식당이 없어요 😢<br>기피 카테고리나 지역을 조정해 보세요!<br><small>※ 현재 데이터에는 패스트푸드 식당이 없어요.</small></div>`;
+    $("#randombox").style.display="none"; return;
+  }
+  $("#randombox").style.display="block";
+  box.innerHTML=wiz.top5.map((r,i)=>`
+    <div class="result-item" data-id="${r.id}">
+      <div class="rank">${i+1}</div>
+      <div class="info"><div class="nm">${r.name}</div>
+      <div class="mt">${r.cat} · ⭐${r.rating.toFixed(1)} · ${r.region} ${r.dist}m · 평균 ${won(r.avg)}</div></div>
+      <button class="ibtn" onclick="event.stopPropagation();showRest(${r.id})">ⓘ</button>
+    </div>`).join("");
+  $$("#top5-list .result-item").forEach(el=>el.onclick=()=>{
+    $$("#top5-list .result-item").forEach(x=>x.classList.remove("picked"));
+    el.classList.add("picked");
+    wiz.picked=R.find(r=>r.id==el.dataset.id);
+    $("#confirm-pick").style.display="block";
+  });
+}
+$("#randombox").onclick=()=>{
+  if(!wiz.top5.length) return;
+  const btn=$("#randombox"); btn.disabled=true;
+  let i=0, rounds=12+Math.floor(Math.random()*6);
+  const items=$$("#top5-list .result-item");
+  const spin=setInterval(()=>{
+    items.forEach(x=>x.classList.remove("picked"));
+    items[i%items.length].classList.add("picked");
+    i++;
+    if(i>=rounds){ clearInterval(spin); btn.disabled=false;
+      wiz.picked=R.find(r=>r.id==items[(i-1)%items.length].dataset.id);
+      setTimeout(()=>finishPick(true),400); }
+  },110);
+};
+$("#confirm-pick").onclick=()=>finishPick(false);
+function finishPick(isRandom){
+  const r=wiz.picked;
+  if(CLOUD&&profile) sb.from("picks").insert({user_id:cloudUid,restaurant_id:r.id,college:profile.college}).then(()=>{});
+  $("#irumae-final").innerHTML=irumaeSVG('yay');
+  $("#final-speech").innerHTML=
+    `${isRandom?"🎁 랜덤박스 당첨!":"🏆 탁월한 선택!"}<br>오늘의 메뉴는 <b style="color:var(--accent);">${r.name}</b>!<br>${wiz.mode==="multi"?`${wiz.mates.map(f=>f.name).join(", ")}랑 같이 맛있게 먹어~ 😋`:"맛있게 먹고 와~ 😋"}`;
+  $("#final-card").innerHTML=restCard(r);
+  showStep(6);
+}
+
+/* ================================================================ 맛집 사전 ================================================================ */
+function dictTab(t){
+  $("#seg-region").classList.toggle("on",t==="region");
+  $("#seg-college").classList.toggle("on",t==="college");
+  $("#dict-region").style.display = t==="region"?"block":"none";
+  $("#dict-college").style.display = t==="college"?"block":"none";
+}
+function listItem(r,extra){
+  return `<div class="list-item" onclick="showRest(${r.id})">
+    <div class="nm">${r.name}</div>
+    ${extra||""}
+    <div class="meta">⭐${r.rating.toFixed(1)} · ${r.dist}m</div>
+  </div>`;
+}
+function dictRegion(area){
+  const list=R.filter(r=>r.region===area).sort((a,b)=>a.dist-b.dist);
+  $("#region-list").innerHTML=
+    `<div class="sub" style="margin-bottom:4px;">📍 ${area} 지역 식당 ${list.length}곳 (가까운 순)</div>`+
+    list.map(r=>listItem(r,`<span class="badge">${r.g}</span>`)).join("");
+}
+/* 단과대별 TOP5: 실제 선택 로그가 없어 단과대명 시드 기반 목업 데이터로 표시 */
+function seededTop5(college){
+  let h=0; for(const ch of college) h=(h*31+ch.charCodeAt(0))>>>0;
+  const arr=[...R].sort((a,b)=>((a.id*2654435761+h)>>>8)%1000-((b.id*2654435761+h)>>>8)%1000);
+  return arr.slice(0,5).map((r,i)=>({r,count:180-i*23-(h%13)}));
+}
+function buildCollegeGrid(){
+  const em=["🏙️","⚖️","💼","🔬","⚙️","📚","🎨","🌐","🤖"];
+  $("#college-grid").innerHTML=COLLEGES.map((c,i)=>
+    `<button class="tile" onclick="dictCollege('${c}')"><span class="em">${em[i]}</span>${c}</button>`).join("");
+}
+async function dictCollege(c){
+  let top, isDemo=false;
+  if(CLOUD){
+    $("#college-list").innerHTML=`<div class="sub">불러오는 중...</div>`;
+    const {data,error}=await sb.rpc("college_top5",{college_name:c});
+    top=(error?[]:(data||[])).map(d=>({r:R.find(x=>x.id===d.restaurant_id),count:d.cnt})).filter(t=>t.r);
+  }else{ top=seededTop5(c); isDemo=true; }
+  $("#college-list").innerHTML=
+    `<div class="sub" style="margin-bottom:4px;">🏆 ${c} 학생들의 선택 TOP 5${isDemo?' <small>(데모 데이터)</small>':''}</div>`+
+    (top.length ? top.map((t,i)=>`<div class="list-item" onclick="showRest(${t.r.id})">
+      <div class="rank" style="width:28px;height:28px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">${i+1}</div>
+      <div class="nm">${t.r.name}</div>
+      <div class="meta">${t.count}회 선택</div></div>`).join("")
+    : `<div class="card sub">아직 ${c} 학생들의 선택 기록이 없어요.<br>뽑기에서 첫 기록을 남겨보세요! 🎲</div>`);
+}
+
+/* ================================================================ 설정 ================================================================ */
+function showSub(which){
+  ["friends","contact","setting"].forEach(k=>{
+    const el=$("#sub-"+k);
+    el.style.display = (k===which && el.style.display!=="block") ? "block":"none";
+  });
+  if(which==="friends") renderFriends();
+}
+function renderFriends(){
+  $("#friend-list").innerHTML = friends.length
+    ? friends.map(f=>`<div class="friend-row">
+        <div class="avatar">${f.name[0]}</div>
+        <div class="fi"><div class="fn">${f.name} <small class="sub">@${f.id}</small></div>
+        <div class="fd">${f.college} · 선호: ${f.pref.join(", ")||"없음"}</div></div>
+        <button class="btn ghost sm" onclick="removeFriend('${f.id}')">삭제</button></div>`).join("")
+    : `<div class="sub">아직 친구가 없어요. ID로 친구를 추가해 보세요!</div>`;
+}
+async function addFriendById(){
+  const id=$("#add-friend-id").value.trim();
+  if(!id){ toast("친구 ID를 입력해 주세요!"); return; }
+  if(friends.some(f=>f.id===id)){ toast("이미 추가된 친구예요!"); return; }
+  if(profile&&profile.id===id){ toast("본인은 추가할 수 없어요!"); return; }
+  if(CLOUD){
+    if(await addFriendCloud(id)){ $("#add-friend-id").value=""; renderFriends(); }
+    return;
+  }
+  // 로컬 데모: 서버가 없으므로 입력한 ID로 임의 프로필 생성
+  const names=["최준호","정서연","한도윤","오유진","임태양","서지민"];
+  const f={ id, name:names[Math.floor(Math.random()*names.length)],
+    college:COLLEGES[Math.floor(Math.random()*COLLEGES.length)],
+    pref:[CATS[Math.floor(Math.random()*6)]], cant:"", allergy:"" };
+  friends.push(f); localStorage.setItem(LS.friends,JSON.stringify(friends));
+  $("#add-friend-id").value=""; renderFriends(); toast(`${f.name}(@${id})님을 추가했어요!`);
+}
+async function removeFriend(id){
+  if(CLOUD){
+    const f=friends.find(x=>x.id===id);
+    if(f) await sb.from("friends").delete().eq("user_id",cloudUid).eq("friend_id",f.uid);
+    await loadFriendsCloud();
+  }else{
+    friends=friends.filter(f=>f.id!==id);
+    localStorage.setItem(LS.friends,JSON.stringify(friends));
+  }
+  renderFriends();
+}
+function copyInvite(){
+  const myid=profile?profile.id:"guest";
+  const link = CLOUD ? `${location.origin}${location.pathname}?invite=${myid}`
+                     : `https://irumae-moi.uos.app/invite?from=${myid}`;
+  copyText(link,"초대 링크를 복사했어요! 🔗");
+}
+function copyEmail(){ copyText($("#contact-email").value,"이메일을 복사했어요! ✉️"); }
+
+/* ---------- 테마 / 로그아웃 ---------- */
+function applyTheme(t){
+  document.getElementById("phone").dataset.theme=t;
+  document.documentElement.dataset.theme=t;
+  $("#theme-state").textContent = t==="dark"?"다크":"라이트";
+  localStorage.setItem(LS.theme,t);
+}
+function toggleTheme(){ applyTheme((localStorage.getItem(LS.theme)||"light")==="light"?"dark":"light"); }
+async function logout(){
+  if(CLOUD){
+    if(!confirm("로그아웃 하시겠어요?")) return;
+    await sb.auth.signOut();
+    profile=null; cloudUid=null; friends=[];
+    $("#a-pw").value="";
+    go("auth");
+  }else{
+    if(!confirm("로그아웃 하시겠어요? 프로필 정보가 초기화됩니다.")) return;
+    localStorage.removeItem(LS.profile); profile=null;
+    buildSignupForm(); $("#signup-sub").textContent="프로필을 설정하고 시작해요!";
+    go("signup");
+  }
+  toast("로그아웃 되었어요.");
+}
+
+/* ================================================================ 초기화 ================================================================ */
+buildSignupForm(); buildCollegeGrid();
+$("#irumae-home").innerHTML=irumaeSVG('hi');
+applyTheme(localStorage.getItem(LS.theme)||"light");
+if(CLOUD){
+  bootCloud();
+}else if(profile){
+  greet(); go("home");
+}else{
+  go("signup");
+}
+</script>
+</body>
+</html>
