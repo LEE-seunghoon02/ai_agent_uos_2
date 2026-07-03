@@ -19,15 +19,16 @@
 body{background:#2A3340;display:flex;justify-content:center;min-height:100vh;}
 #phone{width:100%;max-width:430px;min-height:100vh;background:var(--bg);color:var(--text);
   display:flex;flex-direction:column;position:relative;transition:background .3s,color .3s;}
-.screen{display:none;flex:1;flex-direction:column;overflow-y:auto;padding-bottom:88px;}
+.screen{display:none;flex:1;flex-direction:column;overflow-y:auto;padding-bottom:104px;}
 .screen.active{display:flex;}
 .appbar{padding:18px 20px 10px;font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px;}
 .appbar small{font-size:12px;color:var(--text-sub);font-weight:500;}
 .content{padding:8px 20px 20px;display:flex;flex-direction:column;gap:14px;}
 
 /* ---------- bottom nav ---------- */
-#nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;
-  background:var(--card);border-top:1px solid var(--line);display:flex;z-index:50;}
+#nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);width:calc(100% - 28px);max-width:402px;
+  background:var(--card);border:1px solid var(--line);border-radius:22px;display:flex;z-index:50;
+  box-shadow:var(--shadow);overflow:hidden;}
 #nav button{flex:1;background:none;border:none;padding:10px 0 12px;cursor:pointer;
   color:var(--text-sub);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:3px;}
 #nav button .ico{font-size:21px;line-height:1;}
@@ -402,6 +403,11 @@ const R = [
 {id:54,name:"가위바위보떡볶이 휘경여고점",g:"분식",cat:"분식",region:"시립대",dist:1316,addr:"동대문구 한천로46가길 1",tel:"02-6015-4949",rating:4.3,rev:24,hours:"화~일 11:30-22 (월 15:30-)",menus:[["떡볶이(1인)",4500],["김밥",3500],["쫄면",4000]],avg:4000},
 {id:55,name:"근처식당",g:"아시안",cat:"아시안(동남아)",region:"회기",dist:1562,addr:"성북구 회기로3길 2",tel:"010-7470-4393",rating:4.3,rev:248,hours:"매일 11:30-21 (주말 12-)",menus:[["분짜",12000],["팟타이",12000],["쌀국수",11000]],avg:11667}
 ];
+/* 시립대 정문 기준 거리(m) — 식당목록.xlsx N열. 표시/정렬/추천 거리는 모두 시립대 기준 */
+const UOS_DIST={1:940,2:555,3:540,4:964,5:529,6:92,7:94,8:98,9:109,10:125,11:958,12:138,13:169,14:186,15:777,16:192,17:201,18:624,19:706,20:993,21:957,22:546,23:691,24:1088,25:653,26:1073,27:1105,28:344,29:1131,30:930,31:446,32:1063,33:441,34:936,35:943,36:943,37:1111,38:964,39:1059,40:909,41:1046,42:502,43:552,44:1054,45:716,46:632,47:668,48:1260,49:733,50:750,51:760,52:1346,53:929,54:1316,55:1746};
+/* 좌표(위도,경도) — 식당목록.xlsx J,K열. 지도 링크용 */
+const GEO={1:[37.5910852,127.0553631],2:[37.5800901,127.048638],3:[37.5803414,127.0486427],4:[37.5912694,127.0556348],5:[37.5805205,127.0486695],6:[37.5833733,127.0546042],7:[37.5824459,127.052986],8:[37.5832961,127.0548247],9:[37.5828352,127.0527699],10:[37.5838176,127.0541439],11:[37.591317,127.0538236],12:[37.5838961,127.0536039],13:[37.5839483,127.0529149],14:[37.584246,127.0531885],15:[37.5797789,127.045992],16:[37.5816171,127.0522979],17:[37.5818102,127.0520202],18:[37.5785165,127.0492794],19:[37.5813305,127.0461742],20:[37.5915842,127.0528759],21:[37.5912389,127.0526255],22:[37.5787935,127.050237],23:[37.5779835,127.0488944],24:[37.5920671,127.0575782],25:[37.5780696,127.0494373],26:[37.592316,127.0529927],27:[37.5926164,127.0531669],28:[37.5845818,127.0509062],29:[37.5927625,127.05216],30:[37.5803,127.0438925],31:[37.5833616,127.0490108],32:[37.5920087,127.051242],33:[37.5834464,127.049083],34:[37.5805264,127.0437346],35:[37.5805756,127.0436402],36:[37.5805756,127.0436402],37:[37.5924402,127.0511948],38:[37.5812345,127.043217],39:[37.5917516,127.0502508],40:[37.5822259,127.043698],41:[37.5915679,127.0500554],42:[37.5789116,127.057095],43:[37.5780734,127.0562807],44:[37.5820778,127.0420671],45:[37.5868283,127.0602286],46:[37.5781592,127.058306],47:[37.5852856,127.0608459],48:[37.5788946,127.0405283],49:[37.5862905,127.0609752],50:[37.5858112,127.0615473],51:[37.5766647,127.0580394],52:[37.5791952,127.039376],53:[37.5753481,127.0590191],54:[37.5823294,127.068923],55:[37.5913889,127.037489]};
+R.forEach(r=>{ r.dist=UOS_DIST[r.id]; r.lat=GEO[r.id][0]; r.lng=GEO[r.id][1]; });
 
 /* ================================================================ 상태 ================================================================ */
 const LS = {profile:"irumae_profile", friends:"irumae_friends", theme:"irumae_theme"};
@@ -501,12 +507,13 @@ function closeModal(){ $("#modal-bg").classList.remove("open"); }
 function restCard(r){
   return `
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-    <div style="font-size:19px;font-weight:800;flex:1;">${r.name}</div>
+    <a href="https://map.kakao.com/link/map/${encodeURIComponent(r.name)},${r.lat},${r.lng}" target="_blank" rel="noopener"
+       style="font-size:19px;font-weight:800;flex:1;color:var(--text);text-decoration:none;">${r.name} <span style="font-size:14px;">📍</span></a>
     <span class="badge">${r.region}</span>
   </div>
-  <div class="sub">${r.cat} · ⭐ ${r.rating.toFixed(1)} (리뷰 ${r.rev.toLocaleString()}개)</div>
+  <div class="sub">${r.cat} · ⭐ ${r.rating.toFixed(1)} (리뷰 ${r.rev.toLocaleString()}개) · <small>이름을 누르면 지도로 이동</small></div>
   <div class="info-row"><span class="k">📍 주소</span><span>${r.addr}</span></div>
-  <div class="info-row"><span class="k">🚶 거리</span><span>${r.region} 기준 약 ${r.dist}m</span></div>
+  <div class="info-row"><span class="k">🚶 거리</span><span>시립대 정문에서 약 ${r.dist}m</span></div>
   <div class="info-row"><span class="k">🕐 영업</span><span>${r.hours}</span></div>
   ${r.tel?`<div class="info-row"><span class="k">📞 전화</span><span>${r.tel}</span></div>`:""}
   <div style="margin-top:14px;font-weight:800;font-size:14px;">대표 메뉴 <small class="sub">(가격은 추정치)</small></div>
@@ -673,7 +680,7 @@ function renderTop5(){
     <div class="result-item" data-id="${r.id}">
       <div class="rank">${i+1}</div>
       <div class="info"><div class="nm">${r.name}</div>
-      <div class="mt">${r.cat} · ⭐${r.rating.toFixed(1)} · ${r.region} ${r.dist}m · 평균 ${won(r.avg)}</div></div>
+      <div class="mt">${r.cat} · ⭐${r.rating.toFixed(1)} · 시립대 ${r.dist}m · 평균 ${won(r.avg)}</div></div>
       <button class="ibtn" onclick="event.stopPropagation();showRest(${r.id})">ⓘ</button>
     </div>`).join("");
   $$("#top5-list .result-item").forEach(el=>el.onclick=()=>{
