@@ -61,6 +61,29 @@ create policy "picks_select" on public.picks
 create policy "picks_insert_own" on public.picks
   for insert to authenticated with check (auth.uid() = user_id);
 
+-- ---------------- 친구 맞팔(상호 친구) 트리거 ----------------
+-- A→B 추가/삭제 시 B→A도 자동으로 추가/삭제
+create or replace function public.sync_friend_insert()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into friends(user_id, friend_id) values (new.friend_id, new.user_id)
+  on conflict do nothing;
+  return new;
+end $$;
+create trigger friends_mutual_insert
+  after insert on public.friends
+  for each row execute function public.sync_friend_insert();
+
+create or replace function public.sync_friend_delete()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  delete from friends where user_id = old.friend_id and friend_id = old.user_id;
+  return old;
+end $$;
+create trigger friends_mutual_delete
+  after delete on public.friends
+  for each row execute function public.sync_friend_delete();
+
 -- ---------------- 단과대별 TOP5 집계 함수 ----------------
 create or replace function public.college_top5(college_name text)
 returns table(restaurant_id int, cnt bigint)
