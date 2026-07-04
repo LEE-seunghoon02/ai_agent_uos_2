@@ -16,8 +16,9 @@
   --chip:#242C38; --accent-soft:#12332F; --shadow:0 4px 16px rgba(0,0,0,.4);
 }
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
-body{background:#2A3340;display:flex;justify-content:center;min-height:100vh;}
-#phone{width:100%;max-width:430px;min-height:100vh;background:var(--bg);color:var(--text);
+body{background:#2A3340;display:flex;justify-content:center;min-height:100vh;padding:12px;}
+#phone{width:100%;max-width:430px;min-height:calc(100vh - 24px);background:var(--bg);color:var(--text);
+  border-radius:32px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.35);
   display:flex;flex-direction:column;position:relative;transition:background .3s,color .3s;}
 .screen{display:none;flex:1;flex-direction:column;overflow-y:auto;padding-bottom:104px;}
 .screen.active{display:flex;}
