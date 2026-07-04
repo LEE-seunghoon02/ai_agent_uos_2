@@ -409,67 +409,6 @@ const UOS_DIST={1:940,2:555,3:540,4:964,5:529,6:92,7:94,8:98,9:109,10:125,11:958
 const GEO={1:[37.5910852,127.0553631],2:[37.5800901,127.048638],3:[37.5803414,127.0486427],4:[37.5912694,127.0556348],5:[37.5805205,127.0486695],6:[37.5833733,127.0546042],7:[37.5824459,127.052986],8:[37.5832961,127.0548247],9:[37.5828352,127.0527699],10:[37.5838176,127.0541439],11:[37.591317,127.0538236],12:[37.5838961,127.0536039],13:[37.5839483,127.0529149],14:[37.584246,127.0531885],15:[37.5797789,127.045992],16:[37.5816171,127.0522979],17:[37.5818102,127.0520202],18:[37.5785165,127.0492794],19:[37.5813305,127.0461742],20:[37.5915842,127.0528759],21:[37.5912389,127.0526255],22:[37.5787935,127.050237],23:[37.5779835,127.0488944],24:[37.5920671,127.0575782],25:[37.5780696,127.0494373],26:[37.592316,127.0529927],27:[37.5926164,127.0531669],28:[37.5845818,127.0509062],29:[37.5927625,127.05216],30:[37.5803,127.0438925],31:[37.5833616,127.0490108],32:[37.5920087,127.051242],33:[37.5834464,127.049083],34:[37.5805264,127.0437346],35:[37.5805756,127.0436402],36:[37.5805756,127.0436402],37:[37.5924402,127.0511948],38:[37.5812345,127.043217],39:[37.5917516,127.0502508],40:[37.5822259,127.043698],41:[37.5915679,127.0500554],42:[37.5789116,127.057095],43:[37.5780734,127.0562807],44:[37.5820778,127.0420671],45:[37.5868283,127.0602286],46:[37.5781592,127.058306],47:[37.5852856,127.0608459],48:[37.5788946,127.0405283],49:[37.5862905,127.0609752],50:[37.5858112,127.0615473],51:[37.5766647,127.0580394],52:[37.5791952,127.039376],53:[37.5753481,127.0590191],54:[37.5823294,127.068923],55:[37.5913889,127.037489]};
 R.forEach(r=>{ r.dist=UOS_DIST[r.id]; r.lat=GEO[r.id][0]; r.lng=GEO[r.id][1]; });
 
-/* ================================================================
-   구글맵(Places API New) 연동 — config.js에 키가 있으면 앱 시작 시
-   시립대/청량리/회기 주변 식당을 추가로 불러와 R에 병합 (24시간 캐시)
-================================================================ */
-const GMAPS = window.GOOGLE_MAPS_API_KEY || "";
-const BASES = {"시립대":[37.5827,127.054], "청량리":[37.5801,127.0481], "회기":[37.5908,127.0552]};
-function hav(a,b,c,d){ const rad=x=>x*Math.PI/180, dLa=rad(c-a), dLo=rad(d-b);
-  const h=Math.sin(dLa/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(dLo/2)**2;
-  return Math.round(2*6371000*Math.asin(Math.sqrt(h))); }
-function placeHashId(s){ let h=0; for(const ch of s) h=(h*31+ch.charCodeAt(0))|0; return 100000+Math.abs(h)%800000; }
-const TYPE2G = {korean_restaurant:"한식",korean_barbecue_restaurant:"한식",chinese_restaurant:"중식",
-  japanese_restaurant:"일식",sushi_restaurant:"일식",ramen_restaurant:"일식",
-  italian_restaurant:"양식",french_restaurant:"양식",american_restaurant:"양식",steak_house:"양식",
-  pizza_restaurant:"양식",spanish_restaurant:"양식",brunch_restaurant:"양식",
-  hamburger_restaurant:"패스트푸드",fast_food_restaurant:"패스트푸드",sandwich_shop:"패스트푸드",
-  vietnamese_restaurant:"아시안",thai_restaurant:"아시안",indian_restaurant:"아시안",
-  indonesian_restaurant:"아시안",asian_restaurant:"아시안"};
-function mergeGoogle(list){
-  const ids=new Set(R.map(r=>r.id));
-  let n=0;
-  for(const m of list){ if(!ids.has(m.id)){ R.push(m); ids.add(m.id); n++; } }
-  if(n) toast(`구글맵에서 식당 ${n}곳을 추가로 불러왔어요! 🗺️`);
-}
-async function loadGooglePlaces(){
-  if(!GMAPS) return;
-  try{
-    const cached=JSON.parse(localStorage.getItem("irumae_gplaces")||"null");
-    if(cached && Date.now()-cached.t < 86400000){ mergeGoogle(cached.list); return; }
-    const raw=[];
-    for(const [area,[la,lo]] of Object.entries(BASES)){
-      const res=await fetch("https://places.googleapis.com/v1/places:searchNearby",{
-        method:"POST",
-        headers:{ "Content-Type":"application/json", "X-Goog-Api-Key":GMAPS,
-          "X-Goog-FieldMask":"places.id,places.displayName,places.primaryType,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.regularOpeningHours.weekdayDescriptions" },
-        body:JSON.stringify({ includedTypes:["restaurant"], maxResultCount:20, rankPreference:"POPULARITY",
-          locationRestriction:{circle:{center:{latitude:la,longitude:lo},radius:600}}, languageCode:"ko" })
-      });
-      if(!res.ok) throw new Error("Places API "+res.status);
-      (await res.json()).places?.forEach(p=>raw.push(p));
-    }
-    const seen=new Set(R.map(r=>r.name.replace(/\s/g,"")));
-    const today=(new Date().getDay()+6)%7; // weekdayDescriptions는 월요일부터
-    const mapped=[];
-    for(const p of raw){
-      const nm=p.displayName?.text||""; if(!nm) continue;
-      const key=nm.replace(/\s/g,""); if(seen.has(key)) continue; seen.add(key);
-      const la=p.location.latitude, lo=p.location.longitude;
-      let region="시립대", best=1e9;
-      for(const [a,[ba,bo]] of Object.entries(BASES)){ const d=hav(ba,bo,la,lo); if(d<best){best=d;region=a;} }
-      mapped.push({ id:placeHashId(p.id), name:nm, g:TYPE2G[p.primaryType]||"한식", cat:"구글맵",
-        region, dist:hav(BASES["시립대"][0],BASES["시립대"][1],la,lo),
-        addr:(p.formattedAddress||"").replace(/^대한민국\s*/,""), tel:p.nationalPhoneNumber||"",
-        rating:p.rating||0, rev:p.userRatingCount||0,
-        hours:p.regularOpeningHours?.weekdayDescriptions?.[today]||"정보 없음",
-        menus:[], avg:null, lat:la, lng:lo, src:"google" });
-    }
-    localStorage.setItem("irumae_gplaces",JSON.stringify({t:Date.now(),list:mapped}));
-    mergeGoogle(mapped);
-  }catch(e){ console.warn("구글맵 데이터 로딩 실패:",e); }
-}
-
 /* ================================================================ 상태 ================================================================ */
 const LS = {profile:"irumae_profile", friends:"irumae_friends", theme:"irumae_theme"};
 /* 모드: config.js에 Supabase 키가 있으면 클라우드, 없으면 로컬(localStorage) */
@@ -577,11 +516,9 @@ function restCard(r){
   <div class="info-row"><span class="k">🚶 거리</span><span>시립대 정문에서 약 ${r.dist}m</span></div>
   <div class="info-row"><span class="k">🕐 영업</span><span>${r.hours}</span></div>
   ${r.tel?`<div class="info-row"><span class="k">📞 전화</span><span>${r.tel}</span></div>`:""}
-  ${r.menus.length?`
   <div style="margin-top:14px;font-weight:800;font-size:14px;">대표 메뉴 <small class="sub">(가격은 추정치)</small></div>
   <div style="margin-top:4px;">${r.menus.map(m=>`<div class="menu-row"><span>${m[0]}</span><b>${won(m[1])}</b></div>`).join("")}</div>
-  <div class="menu-row" style="border-top:1.5px solid var(--line);margin-top:2px;"><span>평균 가격</span><b style="color:var(--accent);">${won(r.avg)}</b></div>`
-  :`<div class="sub" style="margin-top:12px;">🗺️ 구글맵에서 불러온 식당이라 메뉴/가격 정보가 없어요.<br>식당 이름을 눌러 지도에서 확인해 주세요!</div>`}`;
+  <div class="menu-row" style="border-top:1.5px solid var(--line);margin-top:2px;"><span>평균 가격</span><b style="color:var(--accent);">${won(r.avg)}</b></div>`;
 }
 function showRest(id){ const r=R.find(x=>x.id===id); openModal(restCard(r)+`<button class="btn ghost" style="margin-top:16px;" onclick="closeModal()">닫기</button>`); }
 
@@ -743,7 +680,7 @@ function renderTop5(){
     <div class="result-item" data-id="${r.id}">
       <div class="rank">${i+1}</div>
       <div class="info"><div class="nm">${r.name}</div>
-      <div class="mt">${r.cat} · ⭐${r.rating.toFixed(1)} · 시립대 ${r.dist}m${r.avg?` · 평균 ${won(r.avg)}`:""}</div></div>
+      <div class="mt">${r.cat} · ⭐${r.rating.toFixed(1)} · 시립대 ${r.dist}m · 평균 ${won(r.avg)}</div></div>
       <button class="ibtn" onclick="event.stopPropagation();showRest(${r.id})">ⓘ</button>
     </div>`).join("");
   $$("#top5-list .result-item").forEach(el=>el.onclick=()=>{
@@ -904,7 +841,6 @@ async function logout(){
 /* ================================================================ 초기화 ================================================================ */
 buildSignupForm(); buildCollegeGrid();
 applyTheme(localStorage.getItem(LS.theme)||"light");
-loadGooglePlaces();
 if(CLOUD){
   bootCloud();
 }else if(profile){

@@ -34,21 +34,7 @@ window.SUPABASE_ANON_KEY = "eyJ...";
 
 > anon 키는 공개되어도 되는 키입니다(보안은 RLS 정책이 담당).
 
-### 2. (선택) 구글맵 실시간 데이터 연동
-
-엑셀 55곳 외에 구글맵의 주변 식당을 추가로 불러오려면:
-
-1. [Google Cloud Console](https://console.cloud.google.com)에서 프로젝트 생성 (결제 계정 필요 — 월 무료 할당량 내에서는 과금 없음)
-2. **API 및 서비스 → 라이브러리**에서 **Places API (New)** 활성화
-3. **사용자 인증 정보**에서 API 키 생성
-4. 키 제한 설정: **HTTP 리퍼러** 제한에 배포 주소(`https://<계정>.github.io/*`) 등록, API 제한은 Places API (New)만 허용
-5. `config.js`의 `GOOGLE_MAPS_API_KEY`에 키 입력
-
-앱 시작 시 시립대/청량리/회기 반경 600m의 식당을 각 20곳까지 불러와 병합합니다
-(24시간 localStorage 캐시로 호출량 절약). 구글맵 식당은 메뉴/가격 정보가 없어
-정보 팝업에서 지도 링크로 안내합니다.
-
-### 3. GitHub Pages 배포
+### 2. GitHub Pages 배포
 
 1. `config.js` 수정 후 커밋 & 푸시
 2. GitHub 저장소 → **Settings → Pages**
